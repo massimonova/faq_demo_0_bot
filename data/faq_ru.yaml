@@ -1,0 +1,16 @@
+categories:
+  - id: common
+    title: Общие
+    items:
+      - q: Что умеет этот бот?
+        a: "Отвечаю на частые вопросы, ищу по базе, соединяю с оператором."
+        media: null
+  - id: pay
+    title: Оплата
+    items:
+      - q: Как оплатить заказ?
+        a: "Через ЮKassa/карту. Инструкция: https://example.com/pay"
+        media: null
+popular:
+  - "Как оплатить заказ?"
+  - "Что умеет этот бот?"
