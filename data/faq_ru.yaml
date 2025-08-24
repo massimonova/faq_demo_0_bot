@@ -9,14 +9,23 @@ categories:
           - text: "Наш сайт"
             url: "https://example.com"
         media: null
+
   - id: pay
     title: Оплата
     items:
       - q: Как оплатить заказ?
         a: "Через ЮKassa/карту. Инструкция: https://example.com/pay"
-        aliases: ["способы оплаты", "как заплатить"]
+        aliases: ["способы оплаты", "как заплатить", "оплата"]
+        buttons:
+          - text: "Инструкция по оплате"
+            url: "https://example.com/pay"
+        media: null
+      - q: Какие способы оплаты поддерживаются?
+        a: "МИР, ЮKassa, банковские карты. Детали по ссылке."
+        aliases: ["поддерживаемые оплаты", "чем можно платить"]
         buttons: []
         media: null
+
 popular:
   - "Как оплатить заказ?"
   - "Что умеет этот бот?"
