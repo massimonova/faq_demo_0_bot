@@ -52,30 +52,27 @@ async def show_answer(c: CallbackQuery):
 
     text = f"<b>Q:</b> {item.q}\n\n{item.a}"
 
-    # базовая клавиатура
-    kb = answer_kb(cat_id, idx)
-    # добавим ссылки из YAML
-    kb = answer_links_kb(item.buttons, base=kb)
-    # добавим похожие
-    related_raw = []
+    kb = answer_kb(cat_id, idx)                 # базовые кнопки
+    kb = answer_links_kb(item.buttons, base=kb) # ссылки из YAML
     try:
-        res = registry.searcher.search(item.q, limit=5, cutoff=50)
-        for r_cat, r_idx, r_q, _ in res:
+        rel = []
+        for r_cat, r_idx, r_q, _ in registry.searcher.search(item.q, limit=5, cutoff=50):
             if not (r_cat == cat_id and r_idx == idx):
-                related_raw.append((r_cat, r_idx, r_q))
-        kb = related_kb(related_raw, base=kb)
+                rel.append((r_cat, r_idx, r_q))
+        kb = related_kb(rel, base=kb)           # похожие вопросы
     except Exception:
         pass
 
+    markup = kb.as_markup()
     if item.media:
-        if item.media.lower().endswith((".png",".jpg",".jpeg",".webp")):
-            await c.message.delete()
-            await c.message.answer_photo(item.media, caption=text, reply_markup=kb.as_markup())
+        m = item.media.lower()
+        await c.message.delete()
+        if m.endswith((".png",".jpg",".jpeg",".webp")):
+            await c.message.answer_photo(item.media, caption=text, reply_markup=markup)
         else:
-            await c.message.delete()
-            await c.message.answer_document(item.media, caption=text, reply_markup=kb.as_markup())
+            await c.message.answer_document(item.media, caption=text, reply_markup=markup)
     else:
-        await c.message.edit_text(text, reply_markup=kb.as_markup())
+        await c.message.edit_text(text, reply_markup=markup)
     await c.answer()
 
 
