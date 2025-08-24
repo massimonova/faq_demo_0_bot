@@ -12,6 +12,8 @@ from app.services.faq_store import FaqStore
 from app.services.faq_search import FaqSearcher
 from app.services import registry, analytics
 from app.middlewares.logging import EventLogger, RateLimit
+from app.routes import inline as inline_routes
+
 
 bot = Bot(token=settings.bot_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 dp = Dispatcher()
@@ -22,6 +24,8 @@ dp.message.middleware(EventLogger())
 dp.callback_query.middleware(EventLogger())
 dp.message.middleware(RateLimit())
 dp.callback_query.middleware(RateLimit())
+dp.include_router(inline_routes.router)
+
 
 async def _reload_loop():
     while True:

@@ -7,13 +7,16 @@ import os, time, yaml
 class FAQItem:
     q: str
     a: str
-    media: Optional[str] = None  # путь к файлу/URL или None
+    media: Optional[str] = None
+    aliases: List[str] = None
+    buttons: List[Dict[str,str]] = None   # [{"text": "...", "url": "..."}]
 
 @dataclass
 class FAQCategory:
     id: str
     title: str
     items: List[FAQItem]
+
 
 class FaqStore:
     def __init__(self, path: str):
@@ -31,26 +34,30 @@ class FaqStore:
         with open(self.path, "r", encoding="utf-8") as f:
             data = yaml.safe_load(f) or {}
 
-        cats = []
-        q_index = {}
-        q_to_key = {}
+        cats, q_index, q_to_key = [], {}, {}
 
         for cat in data.get("categories", []):
             items = []
             for i, it in enumerate(cat.get("items", [])):
-                item = FAQItem(q=str(it.get("q","")).strip(),
-                               a=str(it.get("a","")).strip(),
-                               media=it.get("media"))
+                item = FAQItem(
+                    q=str(it.get("q", "")).strip(),
+                    a=str(it.get("a", "")).strip(),
+                    media=it.get("media"),
+                    aliases=[str(x).strip() for x in it.get("aliases", [])],
+                    buttons=[{"text":str(b.get("text", "")), "url":str(b.get("url", ""))}
+                             for b in it.get("buttons", [])],
+                )
                 items.append(item)
                 key = (cat["id"], i)
                 q_index[key] = item
                 q_to_key[item.q] = key
+                for alias in item.aliases or []:
+                    q_to_key.setdefault(alias, key)  # мапим алиасы на оригинал
             cats.append(FAQCategory(id=cat["id"], title=cat.get("title",""), items=items))
 
         self.categories = cats
         self.popular_questions = [str(x) for x in data.get("popular", [])]
-        self._q_index = q_index
-        self._q_to_key = q_to_key
+        self._q_index, self._q_to_key = q_index, q_to_key
         self._mtime = os.path.getmtime(self.path)
 
     def reload_if_changed(self) -> bool:

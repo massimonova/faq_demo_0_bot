@@ -1,6 +1,5 @@
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-
 def main_menu_kb():
     kb = InlineKeyboardBuilder()
     kb.button(text="📚 Категории", callback_data="menu:cats")
@@ -56,10 +55,26 @@ def answer_kb(cat_id: str, idx: int):
     kb.button(text="👎 Не помогло", callback_data=f"hv:no:{cat_id}:{idx}")
     kb.button(text="⬅️ В меню", callback_data="menu:root")
     kb.adjust(2,1)
-    return kb.as_markup()
+    return kb
 
 
 def admin_reply_kb(user_id: int):
     kb = InlineKeyboardBuilder()
     kb.button(text="↩️ Ответить", callback_data=f"reply:{user_id}")
     return kb.as_markup()
+
+
+def answer_links_kb(buttons: list[dict], base=None):
+    kb = base or InlineKeyboardBuilder()
+    for b in buttons or []:
+        t, u = b.get("text","").strip(), b.get("url","").strip()
+        if t and u:
+            kb.button(text=t[:64], url=u)
+    return kb
+
+
+def related_kb(related: list[tuple[str,int,str]], base=None):
+    kb = base or InlineKeyboardBuilder()
+    for cat_id, idx, q in related[:3]:
+        kb.button(text=f"🔁 {q[:56]}", callback_data=f"q:{cat_id}:{idx}")
+    return kb

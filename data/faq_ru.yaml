@@ -4,12 +4,18 @@ categories:
     items:
       - q: Что умеет этот бот?
         a: "Отвечаю на частые вопросы, ищу по базе, соединяю с оператором."
+        aliases: ["возможности бота", "что делает бот"]
+        buttons:
+          - text: "Наш сайт"
+            url: "https://example.com"
         media: null
   - id: pay
     title: Оплата
     items:
       - q: Как оплатить заказ?
         a: "Через ЮKassa/карту. Инструкция: https://example.com/pay"
+        aliases: ["способы оплаты", "как заплатить"]
+        buttons: []
         media: null
 popular:
   - "Как оплатить заказ?"

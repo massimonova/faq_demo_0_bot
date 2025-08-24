@@ -9,9 +9,10 @@ from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
 
 from ..keyboards.common import (
-    categories_kb, category_items_kb, search_results_kb, back_menu_kb, answer_kb, admin_reply_kb
+    categories_kb, category_items_kb, search_results_kb, back_menu_kb,
+    answer_kb, admin_reply_kb, answer_links_kb, related_kb
 )
-from ..services import registry
+from ..services import registry, analytics
 
 
 router = Router()
@@ -47,20 +48,34 @@ async def show_answer(c: CallbackQuery):
     _, cat_id, idx = c.data.split(":")
     idx = int(idx)
     item = registry.store.get_item(cat_id, idx)
-    await analytics.inc_view(cat_id, idx)  # ← счётчик
+    await analytics.inc_view(cat_id, idx)
 
     text = f"<b>Q:</b> {item.q}\n\n{item.a}"
+
+    # базовая клавиатура
     kb = answer_kb(cat_id, idx)
+    # добавим ссылки из YAML
+    kb = answer_links_kb(item.buttons, base=kb)
+    # добавим похожие
+    related_raw = []
+    try:
+        res = registry.searcher.search(item.q, limit=5, cutoff=50)
+        for r_cat, r_idx, r_q, _ in res:
+            if not (r_cat == cat_id and r_idx == idx):
+                related_raw.append((r_cat, r_idx, r_q))
+        kb = related_kb(related_raw, base=kb)
+    except Exception:
+        pass
 
     if item.media:
         if item.media.lower().endswith((".png",".jpg",".jpeg",".webp")):
             await c.message.delete()
-            await c.message.answer_photo(item.media, caption=text, reply_markup=kb)
+            await c.message.answer_photo(item.media, caption=text, reply_markup=kb.as_markup())
         else:
             await c.message.delete()
-            await c.message.answer_document(item.media, caption=text, reply_markup=kb)
+            await c.message.answer_document(item.media, caption=text, reply_markup=kb.as_markup())
     else:
-        await c.message.edit_text(text, reply_markup=kb)
+        await c.message.edit_text(text, reply_markup=kb.as_markup())
     await c.answer()
 
 
