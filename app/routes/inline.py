@@ -1,32 +1,45 @@
-from aiogram import Router, F
+from aiogram import Router
 from aiogram.types import InlineQuery, InlineQueryResultArticle, InputTextMessageContent
 from ..services import registry
 
 router = Router()
 
-@router.inline_query(F.query.len() >= 2)
+@router.inline_query()
 async def inline_search(q: InlineQuery):
-    query = q.query.strip()
-    results = registry.searcher.search(query, limit=10, cutoff=55)
+    query = (q.query or "").strip()
+    if len(query) < 2:
+        # пустой ответ, чтобы Telegram понял, что бот жив
+        await q.answer([], cache_time=1, is_personal=True)
+        return
 
+    results = registry.searcher.search(query, limit=10, cutoff=55)
     articles = []
-    for i, (cat_id, idx, question, score) in enumerate(results, start=1):
+    n = 0
+    for cat_id, idx, question, score in results:
+        n += 1
         item = registry.store.get_item(cat_id, idx)
         text = f"<b>Q:</b> {item.q}\n\n{item.a}"
         articles.append(
             InlineQueryResultArticle(
-                id=f"{i}",
+                id=str(n),
                 title=question,
-                description=f"Найдено в категории {cat_id} · {score}%",
-                input_message_content=InputTextMessageContent(message_text=text, parse_mode="HTML")
+                description=f"{cat_id} · {score}%",
+                input_message_content=InputTextMessageContent(
+                    message_text=text,
+                    parse_mode="HTML",
+                ),
             )
         )
+
     if not articles:
-        articles = [InlineQueryResultArticle(
-            id="0",
-            title="Ничего не найдено",
-            input_message_content=InputTextMessageContent(
-                message_text="Ничего не найдено. Откройте бота и задайте вопрос оператору: /start"
+        articles.append(
+            InlineQueryResultArticle(
+                id="0",
+                title="Ничего не найдено",
+                input_message_content=InputTextMessageContent(
+                    message_text="Не найдено. Открой бота и задай вопрос оператору: /start"
+                ),
             )
-        )]
-    await q.answer(articles, cache_time=5, is_personal=True)
+        )
+
+    await q.answer(articles, cache_time=1, is_personal=True)
