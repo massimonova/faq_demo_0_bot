@@ -64,7 +64,7 @@ def create_app() -> web.Application:
     app.add_routes([web.get("/", health), web.get("/healthz", health)])
     SimpleRequestHandler(dispatcher=dp, bot=bot, secret_token=WEBHOOK_SECRET)\
         .register(app, path=WEBHOOK_PATH)
-    setup_application(app, on_startup=on_startup, on_shutdown=on_shutdown)
+    setup_application(app, dp, bot=bot, on_startup=on_startup, on_shutdown=on_shutdown)
     return app
 
 if __name__ == "__main__":
