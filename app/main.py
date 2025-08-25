@@ -15,6 +15,9 @@ from app.services.faq_search import FaqSearcher
 from app.services import registry, analytics
 from app.middlewares.logging import EventLogger, RateLimit
 
+registry.store = FaqStore("data/faq_ru.yaml")
+registry.searcher = FaqSearcher(registry.store)
+
 BOT_TOKEN = settings.bot_token
 ADMIN_ID = settings.admin_id
 BASE_URL = os.getenv("BASE_URL", "").rstrip("/")
