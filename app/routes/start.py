@@ -3,15 +3,22 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from app.keyboards.reply import main_menu_kb
 
-# ... существующие хендлеры выше
+from aiogram import Router, F
+from aiogram.filters import CommandStart
+from aiogram.types import Message, CallbackQuery
+
+from app.keyboards.reply import main_menu_kb
+from app.keyboards.common import answer_kb
+from app.services import registry
+
+router = Router(name="start_routes")
 
 
 @router.callback_query(F.data == "menu:root")
 async def to_root(c: CallbackQuery):
-    await c.message.delete()
     await c.message.answer("Выберите действие:", reply_markup=main_menu_kb())
     await c.answer()
-
+    
 # ===== Задать вопрос (вернули рабочий поток) =====
 class Ask(StatesGroup):
     waiting = State()
