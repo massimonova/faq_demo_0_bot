@@ -15,6 +15,13 @@ from app.services.faq_search import FaqSearcher
 from app.services import registry, analytics
 from app.middlewares.logging import EventLogger, RateLimit
 
+from app.routes import inline as inline_routes
+from app.routes import start as start_routes
+from app.routes import faq as faq_routes
+from app.routes import admin as admin_routes
+from app.routes import fallback as fallback_routes
+
+
 registry.store = FaqStore("data/faq_ru.yaml")
 registry.searcher = FaqSearcher(registry.store)
 
@@ -32,6 +39,12 @@ dp.include_router(admin_routes.router)
 dp.include_router(inline_routes.router)
 dp.message.middleware(EventLogger()); dp.callback_query.middleware(EventLogger())
 dp.message.middleware(RateLimit());   dp.callback_query.middleware(RateLimit())
+dp.include_router(fallback_routes.router)
+
+async def on_startup(app):
+    me = await bot.get_me()
+    registry.bot_username = me.username
+
 
 async def _reload_loop():
     while True:
@@ -70,7 +83,7 @@ def create_app() -> web.Application:
     SimpleRequestHandler(dispatcher=dp, bot=bot, secret_token=WEBHOOK_SECRET)\
         .register(app, path=WEBHOOK_PATH)
 
-    setup_application(app, dp, bot=bot, on_startup=on_startup, on_shutdown=on_shutdown)
+    setup_application(app, dp, bot=bot, on_startup=[on_startup], on_shutdown=[on_shutdown])
     return app
 
 if __name__ == "__main__":
