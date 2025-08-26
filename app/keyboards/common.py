@@ -1,18 +1,17 @@
-from aiogram.utils.keyboard import InlineKeyboardBuilder
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-def main_menu_kb():
-    kb = InlineKeyboardBuilder()
-    kb.button(text="📚 Категории", callback_data="menu:cats")
-    kb.button(text="🔥 Популярное", callback_data="menu:popular")
-    kb.button(text="🔎 Поиск", callback_data="menu:search")
-    kb.button(text="✉️ Задать вопрос", callback_data="menu:ask")
-    kb.adjust(2,2)
-    return kb.as_markup()
+def main_menu_kb() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🔥 Популярное",  callback_data="menu:popular")],
+        [InlineKeyboardButton(text="🔎 Поиск",       callback_data="menu:search")],
+        [InlineKeyboardButton(text="📚 Категории",   callback_data="menu:cats")],
+        [InlineKeyboardButton(text="✉️ Задать вопрос", callback_data="menu:ask")],
+    ])
 
-def back_menu_kb():
-    kb = InlineKeyboardBuilder()
-    kb.button(text="⬅️ В меню", callback_data="menu:root")
-    return kb.as_markup()
+def back_menu_kb() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="⬅️ В меню", callback_data="menu:root")]
+    ])
 
 def categories_kb(categories):
     kb = InlineKeyboardBuilder()

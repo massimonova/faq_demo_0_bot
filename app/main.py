@@ -6,45 +6,36 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 
 from app.config import settings
-from app.routes import start as start_routes
-from app.routes import faq as faq_routes
-from app.routes import admin as admin_routes
-from app.routes import inline as inline_routes
+from app.services import registry, analytics
 from app.services.faq_store import FaqStore
 from app.services.faq_search import FaqSearcher
-from app.services import registry, analytics
-from app.middlewares.logging import EventLogger, RateLimit
 
-from app.routes import inline as inline_routes
 from app.routes import start as start_routes
 from app.routes import faq as faq_routes
 from app.routes import admin as admin_routes
+from app.routes import inline as inline_routes
 from app.routes import fallback as fallback_routes
 
-
-registry.store = FaqStore("data/faq_ru.yaml")
-registry.searcher = FaqSearcher(registry.store)
-
-BOT_TOKEN = settings.bot_token
-ADMIN_ID = settings.admin_id
-BASE_URL = os.getenv("BASE_URL", "").rstrip("/")
+BOT_TOKEN      = settings.bot_token
+ADMIN_ID       = settings.admin_id
+BASE_URL       = os.getenv("BASE_URL", "").rstrip("/")
 WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET", "change-me")
-WEBHOOK_PATH = "/webhook"  # НЕ BOT_TOKEN
+WEBHOOK_PATH   = "/webhook"
 
 bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 dp = Dispatcher()
+
+# Роутеры (fallback строго последним)
 dp.include_router(start_routes.router)
 dp.include_router(faq_routes.router)
 dp.include_router(admin_routes.router)
 dp.include_router(inline_routes.router)
-dp.message.middleware(EventLogger()); dp.callback_query.middleware(EventLogger())
-dp.message.middleware(RateLimit());   dp.callback_query.middleware(RateLimit())
 dp.include_router(fallback_routes.router)
 
-async def on_startup(app):
-    me = await bot.get_me()
-    registry.bot_username = me.username
-
+# Мидлвари
+from app.middlewares.logging import EventLogger, RateLimit
+dp.message.middleware(EventLogger()); dp.callback_query.middleware(EventLogger())
+dp.message.middleware(RateLimit());   dp.callback_query.middleware(RateLimit())
 
 async def _reload_loop():
     while True:
@@ -57,10 +48,19 @@ async def _reload_loop():
         await asyncio.sleep(5)
 
 async def on_startup(app: web.Application):
+    # БД аналитики и FAQ
     await analytics.init_db()
     registry.store = FaqStore("data/faq_ru.yaml")
     registry.searcher = FaqSearcher(registry.store)
+
+    # username бота — нужно для ссылок/логов
+    me = await bot.get_me()
+    registry.bot_username = me.username
+
+    # авто-перезагрузка YAML
     asyncio.create_task(_reload_loop())
+
+    # вебхук
     if BASE_URL:
         await bot.set_webhook(
             url=BASE_URL + WEBHOOK_PATH,
@@ -74,9 +74,9 @@ async def on_shutdown(app: web.Application):
     except Exception:
         pass
 
-
 def create_app() -> web.Application:
     app = web.Application()
+
     async def health(_): return web.Response(text="ok")
     app.add_routes([web.get("/", health), web.get("/healthz", health)])
 

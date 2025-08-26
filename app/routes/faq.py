@@ -1,5 +1,4 @@
 from ..config import settings
-from ..services import analytics
 from ..keyboards.common import (
     categories_kb, category_items_kb, search_results_kb, back_menu_kb, answer_kb)
 
@@ -35,6 +34,9 @@ async def show_category_items(c: CallbackQuery):
     _, cat_id, page = c.data.split(":")
     page = int(page)
     cat = registry.store.get_category(cat_id)
+    if not cat:
+        await c.answer("Категория не найдена", show_alert=True)
+        return
     titles = [it.q for it in cat.items]
     await c.message.edit_text(
         f"Категория: <b>{cat.title or cat.id}</b>",
@@ -43,53 +45,54 @@ async def show_category_items(c: CallbackQuery):
     await c.answer()
 
 # Показ конкретного ответа
-@router.callback_query(F.data.startswith("q:"))
-async def show_answer(c: CallbackQuery):
-    _, cat_id, idx = c.data.split(":")
-    idx = int(idx)
-    item = registry.store.get_item(cat_id, idx)
-    await analytics.inc_view(cat_id, idx)
+@router.callback_query(F.data.startswith("faq:"))
+async def show_answer(cb: CallbackQuery):
+    try:
+        _, cat_id, idx = cb.data.split(":")
+        idx = int(idx)
+    except Exception:
+        await cb.answer("Некорректный пункт.", show_alert=True)
+        return
+
+    item = registry.store.get_answer(cat_id, idx)
+    if not item:
+        await cb.answer("Ответ не найден. Обновите список.", show_alert=True)
+        return
 
     text = f"<b>Q:</b> {item.q}\n\n{item.a}"
-
-    kb = answer_kb(cat_id, idx)                 # базовые кнопки
-    kb = answer_links_kb(item.buttons, base=kb) # ссылки из YAML
-    try:
-        rel = []
-        for r_cat, r_idx, r_q, _ in registry.searcher.search(item.q, limit=5, cutoff=50):
-            if not (r_cat == cat_id and r_idx == idx):
-                rel.append((r_cat, r_idx, r_q))
-        kb = related_kb(rel, base=kb)           # похожие вопросы
-    except Exception:
-        pass
-
-    markup = kb.as_markup()
-    if item.media:
-        m = item.media.lower()
-        await c.message.delete()
-        if m.endswith((".png",".jpg",".jpeg",".webp")):
-            await c.message.answer_photo(item.media, caption=text, reply_markup=markup)
-        else:
-            await c.message.answer_document(item.media, caption=text, reply_markup=markup)
-    else:
-        await c.message.edit_text(text, reply_markup=markup)
-    await c.answer()
+    await cb.message.edit_text(text, reply_markup=answer_kb(), parse_mode="HTML")
+    await cb.answer()
 
 
 # Популярное
+@router.message(F.text.lower().contains("популяр"))
+async def show_popular(m: Message):
+    results = []
+    for t in registry.store.popular_titles():
+        key = registry.store.lookup_by_question(t)
+        if not key:
+            continue
+        cat_id, idx = key
+        results.append((cat_id, int(idx), t, 100))
+    if not results:
+        await m.answer("Пока нет популярных вопросов.")
+        return
+    await m.answer("Популярное:", reply_markup=search_results_kb(results))
+
 @router.callback_query(F.data == "menu:popular")
-async def show_popular(c: CallbackQuery):
-    items = []
-    for q in registry.store.popular():
-        key = registry.store.lookup_by_question(q)
+async def popular_cb(c: CallbackQuery):
+    results = []
+    for t in registry.store.popular_titles():
+        key = registry.store.lookup_by_question(t)
         if key:
             cat_id, idx = key
-            items.append((cat_id, idx, q, 100))
-    if not items:
-        await c.message.edit_text("Популярные вопросы не настроены.", reply_markup=back_menu_kb())
-    else:
-        await c.message.edit_text("🔥 Популярное:", reply_markup=search_results_kb(items))
+            results.append((cat_id, int(idx), t, 100))
+    if not results:
+        await c.answer("Пока нет популярных вопросов.", show_alert=True)
+        return
+    await c.message.edit_text("Популярное:", reply_markup=search_results_kb(results))
     await c.answer()
+
 
 # Поиск
 @router.callback_query(F.data == "menu:search")
@@ -121,16 +124,21 @@ async def start_ask(c: CallbackQuery, state: FSMContext):
 @router.message(AskState.waiting_text)
 async def collect_ask(m: Message, state: FSMContext):
     admin_id = settings.admin_id
+    admin_id = int(admin_id or 0)  # важно: бывает строкой из ENV
+
     if not admin_id:
         await m.answer("ADMIN_ID не настроен.")
         await state.clear()
         return
-    text = f"✉️ Вопрос от @{m.from_user.username or m.from_user.id} (id {m.from_user.id}):\n\n{m.text}"
+
+    username = f"@{m.from_user.username}" if m.from_user.username else f"id:{m.from_user.id}"
+    text = f"✉️ Вопрос от {username}:\n\n{m.text}"
+
     try:
-        await m.bot.send_message(chat_id=admin_id, text=text, reply_markup=admin_reply_kb(m.from_user.id))
+        await m.bot.send_message(admin_id, text, reply_markup=admin_reply_kb(m.from_user.id))
         await m.answer("Отправлено админу. Ожидайте ответ.")
     except Exception:
-        await m.answer("Не удалось отправить админу. Проверьте ADMIN_ID.")
+        await m.answer("Не удалось отправить админу. Проверьте ADMIN_ID (и что админ нажал /start у бота).")
     await state.clear()
 
 
