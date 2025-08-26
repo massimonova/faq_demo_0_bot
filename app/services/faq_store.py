@@ -84,3 +84,7 @@ class FaqStore:
 
     def popular(self) -> List[str]:
         return self.popular_questions
+
+    def popular_titles(self) -> List[str]:
+    # совместимость с хендлерами, которые ждут popular_titles()
+        return self.popular()
