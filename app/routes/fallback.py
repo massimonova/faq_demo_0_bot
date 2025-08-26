@@ -13,21 +13,13 @@ async def show_categories(m: Message):
     cats = registry.store.categories
     await m.answer("Категории:", reply_markup=categories_kb(cats))
 
-@router.message(F.text.lower().contains("популяр"))
+@router.message(F.text == "🔥 Популярное")
 async def show_popular(m: Message):
-    titles = registry.store.popular_titles()  # ['Как оплатить...', ...]
-    results = []
-    for t in titles:
-        key = registry.store.lookup_by_question(t)  # -> ('pay', 0) и т.п.
-        if key:
-            cat_id, idx = key
-            results.append((cat_id, idx, t, 100))   # (cat_id, idx, q, score)
-
-    if not results:
+    titles = registry.store.popular_titles()
+    if not titles:
         await m.answer("Пока нет популярных вопросов.")
         return
-
-    await m.answer("Популярное:", reply_markup=search_results_kb(results))
+    await m.answer("Популярное:", reply_markup=category_items_kb("popular", titles, page=0))
 
 @router.message(F.text == "🔎 Поиск")
 async def prompt_search(m: Message):
