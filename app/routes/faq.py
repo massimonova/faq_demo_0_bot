@@ -75,7 +75,7 @@ async def show_answer(cb: CallbackQuery):
 @router.message(F.text.lower().contains("популяр"))
 async def show_popular(m: Message):
     if _not_ready():
-        await m.answer("Сервис инициализируется, попробуйте ещё раз.")
+        await m.answer("Сервис инициализируется, попробуйте ещё раз.", show_alert=True)
         return
     results = []
     for t in registry.store.popular_titles():
@@ -120,7 +120,7 @@ async def ask_query(c: CallbackQuery, state: FSMContext):
 @router.message(SearchState.waiting_query)
 async def do_search(m: Message, state: FSMContext):
     if _not_ready():
-        await m.answer("Сервис инициализируется, попробуйте ещё раз.")
+        await m.answer("Сервис инициализируется, попробуйте ещё раз.", show_alert=True)
         return
     q = (m.text or "").strip()
     results = registry.searcher.search(q, limit=6, cutoff=60)
@@ -145,7 +145,7 @@ async def start_ask(c: CallbackQuery, state: FSMContext):
 @router.message(AskState.waiting_text)
 async def collect_ask(m: Message, state: FSMContext):
     if _not_ready():
-        await m.answer("Сервис инициализируется, попробуйте ещё раз.")
+        await m.answer("Сервис инициализируется, попробуйте ещё раз.", show_alert=True)
         return
     admin_id = settings.admin_id
     admin_id = int(admin_id or 0)  # бывает строкой из ENV
